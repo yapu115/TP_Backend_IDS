@@ -1,5 +1,6 @@
-id,equipo_local,equipo_visitante,fecha,fase,estadio,ciudad
-1,Argentina,Arabia Saudita,2026-06-10,Grupos,Estadio Lusail,Lusail
-2,Francia,Brasil,2026-06-10,Grupos,Estadio Al Bayt,Al Khor
-3,Brasil,Argentina,2026-06-15,Grupos,Estadio Lusail,Lusail
-4,Alemania,España,2026-06-15,Grupos,Estadio Al Bayt,Al Khor
+id,equipo_local,equipo_visitante,fecha,fase
+1,Argentina,Arabia Saudita,2026-06-10,Grupos
+2,Francia,Brasil,2026-06-10,Grupos
+3,Brasil,Argentina,2026-06-15,Grupos
+4,Alemania,España,2026-06-15,Grupos
+5,Argentina,Alemania,2026-06-24,Cuartos
