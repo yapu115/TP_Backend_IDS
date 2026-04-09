@@ -1,5 +1,6 @@
 id,equipo_local,equipo_visitante,fecha,fase,estadio,ciudad,goles_local,goles_visitante
-1,Argentina,Brasil,2026-05-19,Fase de grupos,Monumental,Buenos Aires,3,2.0
-2,123,456,2026-05-19,Fase de grupos,Monumental,Buenos Aires,1,
+1,Argentina,Brasil,2026-05-19,Fase de grupos,Monumental,Buenos Aires,2,1
+2,Francia,Brasil,2026-05-19,Fase de grupos,Monumental,Buenos Aires,1,0
 3,Brasil,Argentina,2026-06-15,Grupos,Estadio Lusail,Lusail,0,1
 4,Alemania,España,2026-06-15,Grupos,Estadio AlBayt,Al Khor,1,1
+5,Argentina,Alemania,2026-06-24,Cuartos,,,,

@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from services import servicio_partidos
 from utils.errores import error_respuesta
+from models.PartidoBase import PartidoBase
 
 app = Flask(__name__)
 
@@ -16,6 +17,50 @@ def obtener_partidos():
 
     return jsonify(respuesta_json)
 
+
+@app.route('/partidos', methods=['POST'])
+def crear_partido():
+    """
+    Crear partido
+    """
+    datos = request.get_json()
+
+    # Errores posibles (validación)
+    if not datos:
+        return jsonify({'error': "No se proporcionaron datos en la petición"}), 400
+
+    campos_requeridos = ['equipo_local', 'equipo_visitante', 'fecha', 'fase']
+    for campo in campos_requeridos:
+        if campo not in datos:
+            return jsonify({'error': f'Falta el campo obligatorio: {campo}'}), 400
+
+    if datos['equipo_local'] == datos['equipo_visitante']:
+        return jsonify({'error': 'El equipo local y visitante no pueden ser el mismo'}), 400
+
+
+    # Creación del partido
+    try:
+        nuevo_partido = PartidoBase(
+            equipo_local=datos['equipo_local'],
+            equipo_visitante=datos['equipo_visitante'],
+            fecha=datos['fecha'],
+            fase=datos['fase'],
+        )
+
+        partido_creado = servicio_partidos.crear_partido(nuevo_partido)
+
+        return jsonify({
+        'mensaje': 'Partido creado exitosamente'
+        }), 201
+
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 409
+    
+    except Exception as e:
+        print(f"Error en el servidor: {e}")
+        return jsonify({'error': 'Ocurrió un error interno en el servidor.'}), 500
+
+ 
 #PUT DE RESULTADOS
 @app.route('/partidos/<int:id>/resultado', methods=["PUT"])
 def actualizar_resultado(id):
@@ -23,6 +68,7 @@ def actualizar_resultado(id):
 
         datos = request.get_json()
 
+        #POSIBLES ERRORES  
         if datos is None:
            return error_respuesta("error: Debe enviar un JSON", 400)
     
@@ -99,6 +145,7 @@ def actualizar_partidos(id):
         estadio = datos["estadio"]
         ciudad = datos["ciudad"]
 
+        #POSIBLES ERRORES
         if str(equipo_local).strip() == "":
             return error_respuesta("El equipo local no puede estar vacio", 400)
            
@@ -159,6 +206,9 @@ def actualizar_partidos(id):
 
     except Exception as d:
            return error_respuesta(f"Error interno del servidor: {str(d)}", 500)
+
+
+
 
 
 if __name__ == '__main__':
