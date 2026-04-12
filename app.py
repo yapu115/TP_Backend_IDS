@@ -11,11 +11,72 @@ def hello_world():
 
 @app.route('/partidos', methods=['GET'])
 def obtener_partidos():
-    partidos = servicio_partidos.obtener_todos_los_partidos()
+
+    equipo = request.args.get('equipo')
+    fecha = request.args.get('fecha')
+    fase = request.args.get('fase')
+    _limit = request.args.get('_limit', type=int) 
+    _offset = request.args.get('_offset', default=0, type=int)
+
+    if _limit is not None and _limit <= 0:
+        return jsonify({'error': 'El límite (_limit) debe ser un número mayor a 0'}), 400
+
+    if _offset < 0:
+        return jsonify({'error': 'El desplazamiento (_offset) no puede ser negativo'}), 400
+
+    # Falta una validación con la fecha 
+
+    if fase is not None and fase not in ['Fase de grupos', 'Octavos de final', 'Cuartos de final', 'Semifinal', 'Final']:
+        return jsonify({'error': 'La fase no es válida'}), 400
+
+    partidos, total = servicio_partidos.obtener_todos_los_partidos(
+        equipo=equipo, 
+        fecha=fecha, 
+        fase=fase, 
+        _limit=_limit,
+        _offset=_offset
+    )
+    
+    if not partidos and total == 0:
+        return '', 204
     
     respuesta_json = [partido.to_dict() for partido in partidos]
+    
+    # Si se solicitó paginación, armamos los links HATEOAS
+    if _limit is not None:
+        # urlencode es para obtener los parametros de la peticion en formato string a partir de un diccionario
+        from urllib.parse import urlencode
+        
+        args = request.args.copy()
+        url_base = request.base_url
 
-    return jsonify(respuesta_json)
+        def construir_url(offset_val):
+            args_copy = args.copy()
+            args_copy['_offset'] = offset_val
+            args_copy['_limit'] = _limit
+            return f"{url_base}?{urlencode(args_copy)}"
+
+        last_page_offset = max(0, (total - 1) // _limit * _limit) if total > 0 else 0
+
+        # Se comienza a construir el diccionario con los links
+        links = {
+            '_first': construir_url(0),
+            '_last': construir_url(last_page_offset)
+        }
+
+        if _offset > 0:
+            links['_prev'] = construir_url(max(0, _offset - _limit))
+
+        if _offset + _limit < total:
+            links['_next'] = construir_url(_offset + _limit)
+
+        return jsonify({
+            'resultados': respuesta_json,
+            '_links': links
+        }), 200
+
+
+    return jsonify(respuesta_json), 200
 
 
 @app.route('/partidos', methods=['POST'])
@@ -36,6 +97,9 @@ def crear_partido():
 
     if datos['equipo_local'] == datos['equipo_visitante']:
         return jsonify({'error': 'El equipo local y visitante no pueden ser el mismo'}), 400
+
+    if datos['fase'] not in ['Fase de grupos', 'Octavos de final', 'Cuartos de final', 'Semifinal', 'Final']:
+        return jsonify({'error': 'La fase no es válida'}), 400
 
 
     # Creación del partido

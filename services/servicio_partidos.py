@@ -2,12 +2,21 @@ import pandas as pd
 import csv
 from models.PartidoBase import PartidoBase
 
-def obtener_todos_los_partidos():
+def obtener_todos_los_partidos(equipo=None, fecha=None, fase=None, _limit=None, _offset=0):
     df = pd.read_csv('data/partidos.csv')
 
     partidos = []
 
     for _, fila in df.iterrows():
+        if equipo and equipo.lower() not in str(fila['equipo_local']).lower() and equipo.lower() not in str(fila['equipo_visitante']).lower():
+            continue
+        
+        if fecha and str(fecha).lower() != str(fila['fecha']).lower():
+            continue
+            
+        if fase and str(fase).lower() != str(fila['fase']).lower():
+            continue
+
         partido = PartidoBase(
             equipo_local=str(fila['equipo_local']),
             equipo_visitante=str(fila['equipo_visitante']),
@@ -16,7 +25,17 @@ def obtener_todos_los_partidos():
         )
         partidos.append(partido)
 
-    return partidos
+    # Obtenemos la longitud de los resultados encontrados ANTES de "cortarlos" por pagina
+    total_resultados = len(partidos)
+
+    # Aplicamos la logica de offset saltando la cantidad ingresada
+    if _offset > 0:
+        partidos = partidos[_offset:]
+
+    if _limit is not None and _limit > 0:
+        partidos = partidos[:_limit]
+
+    return partidos, total_resultados
 
 def crear_partido(partido: PartidoBase):
     validar_nuevo_partido(partido)
@@ -44,7 +63,7 @@ def crear_partido(partido: PartidoBase):
 
 
 def validar_nuevo_partido(nuevo_partido):
-    partidos = obtener_todos_los_partidos()
+    partidos, _ = obtener_todos_los_partidos()
 
     for partido in partidos:
         if partido.equipo_local == nuevo_partido.equipo_local and partido.equipo_visitante == nuevo_partido.equipo_visitante and partido.fase == nuevo_partido.fase:
