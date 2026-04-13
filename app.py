@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from services import servicio_partidos
+from services import servicio_partidos, servicios_usuarios
 from utils.errores import error_respuesta
 from models.PartidoBase import PartidoBase
 
@@ -271,9 +271,49 @@ def actualizar_partidos(id):
     except Exception as d:
            return error_respuesta(f"Error interno del servidor: {str(d)}", 500)
 
+@app.route('/usuarios/<int:id>',methods=["GET"])
+def obtener_usuario(id):
+    try:
+        if id<=0:
+            return error_respuesta("ID de usuario invalido",400)
+        
+        usuario = servicios_usuarios.obtener_usuario_por_id(id)
 
+        if usuario is None:
+            return error_respuesta("El ID ingresado no fue encontrado o no existe", 404)
+        
+        return jsonify(usuario),200
+    
+    except Exception as e: 
 
+        return error_respuesta(f"Error interno del servidor: {str(e)}", 500)  
 
+@app.route('/usuarios/<int:id>',methods=["PUT"])
+def editar_usuario(id):
+    try:
+        datos = request.get_json()
+        
+        if not datos:
+            return error_respuesta("No se enviaron datos", 400)
+        
+        if id <= 0:
+            return error_respuesta("ID de usuario invalido", 400)
+            
+        nombre = datos.get('nombre')
+        mail = datos.get('mail')
+        
+        if not nombre or not mail:
+            return error_respuesta("Se deben completar todos los campos", 400)
 
+        usuario_actualizado = servicios_usuarios.actualizar_usuario(id, nombre, mail)
+        
+        if usuario_actualizado is None:
+            return error_respuesta("Usuario no encontrado", 404)
+
+        return jsonify(usuario_actualizado), 200
+
+    except Exception as e:
+        return error_respuesta(f"Error al actualizar: {str(e)}", 500)
+    
 if __name__ == '__main__':
     app.run(debug=True)
