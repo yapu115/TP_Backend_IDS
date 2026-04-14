@@ -1,5 +1,37 @@
 from mysql_db import get_db_connection
 
+def crear_usuario(id, nombre, mail):
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        #Consulta para insertar valores del nuevo usuario a la base de datos
+        consulta = "INSERT INTO usuarios (nombre,mail) VALUES (%s, %s)"
+        
+        #Ejecuta la consulta con los valores de datos (parametro)
+        cursor.execute(consulta,(nombre,mail))
+        
+        #Guarda los cambios
+        conexion.commit()
+        
+        return {"id": id, "nombre": nombre, "mail": mail}
+    finally:
+        cursor.close()
+        conexion.close()
+
+def mostrar_usuarios():
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
+    try:
+        consulta = "SELECT * FROM usuarios"
+        cursor.execute(consulta)
+        usuarios = cursor.fetchall()
+
+        return usuarios
+    finally:
+        cursor.close()
+        conexion.close()
+
+
 def obtener_usuario_por_id(id):
     
     conexion = get_db_connection()
@@ -13,8 +45,7 @@ def obtener_usuario_por_id(id):
         #Guarda la fila correspondiente a ese usuario
         usuario = cursor.fetchone()
         
-        return usuario
-        
+        return usuario  
     finally:
         cursor.close()
         conexion.close()
