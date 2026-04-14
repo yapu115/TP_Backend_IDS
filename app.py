@@ -271,6 +271,38 @@ def actualizar_partidos(id):
     except Exception as d:
            return error_respuesta(f"Error interno del servidor: {str(d)}", 500)
 
+@app.route('/usuarios', methods=["POST"])
+#crear usuarios
+def crear_usuario():
+    datos = request.get_json()
+    if not datos:
+        return jsonify({"Error: Por favor, proporcione los datos necesarios"}), 400
+    campos_requeridos = ["nombre", "mail"]
+    for campo in campos_requeridos:
+        if campo not in datos:
+            return jsonify({f"Error: Campo faltante ({campo})"}), 400
+    
+    try:
+        #Obtiene datos del usuario
+        id = datos.get('id')
+        nombre = datos.get('nombre')
+        mail = datos.get('mail')
+
+        #Crea un nuevo usuario y lo inserta en la tabla
+        nuevo_usuario = servicios_usuarios.crear_usuario(id, nombre, mail)
+        return jsonify(nuevo_usuario), 200
+    except Exception as e:
+        jsonify({f"Error: {str(e)}"}), 500
+
+@app.route('/usuarios', methods=["GET"])
+def mostrar_usuarios():
+    #mostrar usuarios en la base de datos (soporta paginación)
+    try:
+        usuarios = servicios_usuarios.mostrar_usuarios()
+        return jsonify(usuarios), 200
+    except Exception as e:
+        jsonify({f"Error: {str(e)}"}), 500
+    
 @app.route('/usuarios/<int:id>',methods=["GET"])
 def obtener_usuario(id):
     try:
