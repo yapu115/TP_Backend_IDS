@@ -24,7 +24,12 @@ def obtener_partidos():
     if _offset < 0:
         return jsonify({'error': 'El desplazamiento (_offset) no puede ser negativo'}), 400
 
-    # Falta una validación con la fecha 
+    if fecha is not None:
+        from datetime import datetime
+        try:
+            datetime.strptime(fecha, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'La fecha debe cumplir el formato ISO 8601 (YYYY-MM-DD)'}), 400
 
     if fase is not None and fase not in ['Fase de grupos', 'Octavos de final', 'Cuartos de final', 'Semifinal', 'Final']:
         return jsonify({'error': 'La fase no es válida'}), 400
@@ -98,7 +103,7 @@ def crear_partido():
     if datos['equipo_local'] == datos['equipo_visitante']:
         return jsonify({'error': 'El equipo local y visitante no pueden ser el mismo'}), 400
 
-    if datos['fase'] not in ['Fase de grupos', 'Octavos de final', 'Cuartos de final', 'Semifinal', 'Final']:
+    if datos['fase'] not in ['grupos', 'dieciseisavos', 'octavos', 'cuartos', 'semis', 'final']:
         return jsonify({'error': 'La fase no es válida'}), 400
 
 

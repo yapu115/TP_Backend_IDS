@@ -8,10 +8,10 @@ CREATE TABLE usuarios(
     email VARCHAR(50) NULL
 );
 CREATE TABLE partidos(
-    id INT NOT NULL,
-    equipo_local VARCHAR(50) NULL,
-    equipo_visitante VARCHAR(50) NULL,
-    fecha DATE NULL,
+    id INT NOT NULL AUTO_INCREMENT,
+    equipo_local VARCHAR(50) NOT NULL,
+    equipo_visitante VARCHAR(50) NOT NULL,
+    fecha DATE NOT NULL,
     estadio VARCHAR(50) NULL,
     ciudad VARCHAR(50) NULL,
     fase ENUM(
@@ -21,7 +21,7 @@ CREATE TABLE partidos(
         'cuartos',
         'semis',
         'final'
-    ) NULL,
+    ) NOT NULL,
     PRIMARY KEY(id)
 );
 CREATE TABLE resultados(
