@@ -167,3 +167,32 @@ def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio
     df.to_csv('data/partidos.csv', index=False)
 
     return partido_actualizado
+
+#def id para obtener partidos
+def obtener_partido_por_id(id_partido: int):
+    df = pd.read_csv('data/partidos.csv')
+
+    for i in range(len(df)):
+        if int(df.loc[i, 'id']) == id_partido:
+            goles_local = df.loc[i, 'goles_local']
+            goles_visitante = df.loc[i, 'goles_visitante']
+
+            # pandas usa NaN para "vacío"
+            if str(goles_local) == 'nan' or str(goles_visitante) == 'nan':
+                resultado = None
+            else:
+                resultado = {
+                    "local": int(goles_local),
+                    "visitante": int(goles_visitante)
+                }
+
+            return {
+                "id": int(df.loc[i, 'id']),
+                "equipo_local": str(df.loc[i, 'equipo_local']),
+                "equipo_visitante": str(df.loc[i, 'equipo_visitante']),
+                "fecha": str(df.loc[i, 'fecha']),
+                "fase": str(df.loc[i, 'fase']),
+                "resultado": resultado
+            }
+
+    return None

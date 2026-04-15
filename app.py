@@ -129,6 +129,47 @@ def crear_partido():
         print(f"Error en el servidor: {e}")
         return jsonify({'error': 'Ocurrió un error interno en el servidor.'}), 500
 
+#GET partidos
+@app.route('/partidos/<int:id>', methods=['GET'])
+def obtener_partido_por_id(id):
+    try:
+        if id <= 0:
+            # Swagger: 400 con schema Errores
+            return jsonify({
+                "errors": [{
+                    "code": "BAD_REQUEST",
+                    "message": "El id debe ser mayor que 0",
+                    "level": "error",
+                    "description": "El parámetro de ruta id debe ser un entero positivo."
+                }]
+            }), 400
+
+        partido = servicio_partidos.obtener_partido_por_id(id)
+
+        if partido is None:
+            # Swagger: 404 con schema Errores
+            return jsonify({
+                "errors": [{
+                    "code": "NOT_FOUND",
+                    "message": "Partido no encontrado",
+                    "level": "error",
+                    "description": f"No existe un partido con id={id}."
+                }]
+            }), 404
+
+        return jsonify(partido), 200
+
+    except Exception as e:
+        print(f"Error en el servidor: {e}")
+        # Swagger: 500 con schema Errores
+        return jsonify({
+            "errors": [{
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "Error interno del servidor",
+                "level": "error",
+                "description": "Ocurrió un error inesperado procesando la solicitud."
+            }]
+        }), 500
  
 #PUT DE RESULTADOS
 @app.route('/partidos/<int:id>/resultado', methods=["PUT"])
