@@ -4,37 +4,66 @@ from models.PartidoBase import PartidoBase
 from mysql_db import get_db_connection;
 
 def obtener_todos_los_partidos(equipo=None, fecha=None, fase=None, _limit=None, _offset=0):
-    df = pd.read_csv('data/partidos.csv')
 
-    partidos = []
+    # 1. Establecer conexión
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        # 2. Armar la consulta base
+        query = "SELECT * FROM partidos WHERE 1=1" # al hacer el 1=1 se puede concatenar con AND fácilmente en los filtros
+        count_query = "SELECT COUNT(*) as total FROM partidos WHERE 1=1"
+        valores = []
 
-    for _, fila in df.iterrows():
-        if equipo and equipo.lower() not in str(fila['equipo_local']).lower() and equipo.lower() not in str(fila['equipo_visitante']).lower():
-            continue
-        
-        if fecha and str(fecha).lower() != str(fila['fecha']).lower():
-            continue
+        # 3. Aplicar Filtros
+        if equipo:
+            query += " AND (equipo_local LIKE %s OR equipo_visitante LIKE %s)"
+            count_query += " AND (equipo_local LIKE %s OR equipo_visitante LIKE %s)"
+            valores.extend([f"%{equipo}%", f"%{equipo}%"]) # Se usa f"%{equipo}%" para buscar si el texto coincide en cualquier parte string
             
-        if fase and str(fase).lower() != str(fila['fase']).lower():
-            continue
+        if fecha:
+            query += " AND fecha = %s"
+            count_query += " AND fecha = %s"
+            valores.append(fecha)
+            
+        if fase:
+            query += " AND fase = %s"
+            count_query += " AND fase = %s"
+            valores.append(fase)
 
-        partido = PartidoBase(
-            equipo_local=str(fila['equipo_local']),
-            equipo_visitante=str(fila['equipo_visitante']),
-            fecha=str(fila['fecha']),
-            fase=str(fila['fase']),
-        )
-        partidos.append(partido)
+        # 4. Obtener el Total de resultados (antes de aplicar LIMIT para la paginación)
+        cursor.execute(count_query, valores)
+        total_resultados = cursor.fetchone()['total']
 
-    total_resultados = len(partidos)
+        # 5. Aplicar Paginación
+        if _limit is not None and _limit > 0:
+            query += " LIMIT %s OFFSET %s"
+            valores.extend([_limit, _offset])
+        elif _offset > 0:
+            # Si solo hay offset sin limit, le ponemos un limit gigante como buena práctica (no se puede usar offset sin limit en mysql)
+            query += " LIMIT 1000000 OFFSET %s"
+            valores.append(_offset)
 
-    if _offset > 0:
-        partidos = partidos[_offset:]
+        # 6. Ejecutar consulta principal
+        cursor.execute(query, valores)
+        resultados = cursor.fetchall()
+        
+        # 7. Convertir los diccionarios de MySQL a tus objetos PartidoBase
+        partidos = []
+        for fila in resultados:
+            partido = PartidoBase(
+                equipo_local=fila['equipo_local'],
+                equipo_visitante=fila['equipo_visitante'],
+                fecha=str(fila['fecha']), 
+                fase=fila['fase']
+            )
+            partidos.append(partido)
 
-    if _limit is not None and _limit > 0:
-        partidos = partidos[:_limit]
+        return partidos, total_resultados
 
-    return partidos, total_resultados
+    finally:
+        cursor.close()
+        conexion.close()
 
 def crear_partido(partido: PartidoBase):
     # validar_nuevo_partido(partido)
@@ -67,18 +96,46 @@ def crear_partido(partido: PartidoBase):
 
 
 def validar_nuevo_partido(nuevo_partido):
-    partidos, _ = obtener_todos_los_partidos()
-
-    for partido in partidos:
-        if partido.equipo_local == nuevo_partido.equipo_local and partido.equipo_visitante == nuevo_partido.equipo_visitante and partido.fase == nuevo_partido.fase:
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        # Validación 1: Evitar duplicados (basado en ambos equipos y la fase)
+        query_duplicado = """
+            SELECT COUNT(*) as cuenta FROM partidos 
+            WHERE equipo_local = %s AND equipo_visitante = %s AND fase = %s
+        """
+        cursor.execute(query_duplicado, (nuevo_partido.equipo_local, nuevo_partido.equipo_visitante, nuevo_partido.fase))
+        if cursor.fetchone()['cuenta'] > 0:
             raise ValueError('El partido ya existe')
 
-        if partido.fecha == nuevo_partido.fecha:
-            if nuevo_partido.equipo_local in [partido.equipo_local, partido.equipo_visitante]:
-                 raise ValueError(f"{nuevo_partido.equipo_local} ya juega un partido en la fecha {partido.fecha}.")
+        # Validación 2: Chequear que ni el local ni el visitante jueguen ya en esa misma fecha
+        query_fecha = """
+            SELECT equipo_local, equipo_visitante FROM partidos 
+            WHERE fecha = %s AND (
+                equipo_local = %s OR equipo_local = %s OR 
+                equipo_visitante = %s OR equipo_visitante = %s
+            )
+        """
+        cursor.execute(query_fecha, (
+            nuevo_partido.fecha,
+            nuevo_partido.equipo_local, nuevo_partido.equipo_visitante,
+            nuevo_partido.equipo_local, nuevo_partido.equipo_visitante
+        ))
+        
+        conflictos = cursor.fetchall()
+        for partido_conflictivo in conflictos:
+            equipo_loc_db = partido_conflictivo['equipo_local']
+            equipo_vis_db = partido_conflictivo['equipo_visitante']
+            
+            if nuevo_partido.equipo_local in [equipo_loc_db, equipo_vis_db]:
+                raise ValueError(f"{nuevo_partido.equipo_local} ya juega un partido en la fecha {nuevo_partido.fecha}.")
+            if nuevo_partido.equipo_visitante in [equipo_loc_db, equipo_vis_db]:
+                raise ValueError(f"{nuevo_partido.equipo_visitante} ya juega un partido en la fecha {nuevo_partido.fecha}.")
 
-            if nuevo_partido.equipo_visitante in [partido.equipo_local, partido.equipo_visitante]:
-                 raise ValueError(f"{nuevo_partido.equipo_visitante} ya juega un partido en la fecha {partido.fecha}.")
+    finally:
+        cursor.close()
+        conexion.close()
  
 
 #Defino la función de PUT para actualizar los resultados de los partidos. En caso de no haber actualización, devuelve none
