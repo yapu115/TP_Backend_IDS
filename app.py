@@ -393,5 +393,52 @@ def editar_usuario(id):
     except Exception as e:
         return error_respuesta(f"Error al actualizar: {str(e)}", 500)
     
+#POST PREDICCION
+@app.route('/partidos/<int:id>/prediccion', methods=['POST'])
+def crear_prediccion(id):
+    try:
+        # 1. Validar el ID de la URL
+        if id <= 0:
+            return error_respuesta("El id del partido debe ser mayor que 0", 400)
+
+        datos = request.get_json()
+        if not datos:
+            return error_respuesta("Debes enviar un JSON", 400)
+
+        # 2. Validar que vengan todos los campos necesarios
+        campos_requeridos = ["id_usuario", "local", "visitante"]
+        for campo in campos_requeridos:
+            if campo not in datos:
+                return error_respuesta(f"Falta el campo obligatorio {campo}", 400)
+
+        # 3. Validar tipos de datos (que sean enteros mayores o iguales a 0)
+        usuario_id = int(datos["id_usuario"])
+        goles_local = int(datos["local"])
+        goles_visitante = int(datos["visitante"])
+
+        if goles_local < 0 or goles_visitante < 0 or usuario_id <= 0:
+            return error_respuesta("Los goles no pueden ser negativos y el usuario_id debe ser mayor a 0", 400)
+
+        # 4. Llamar al servicio para que se encargue de la lógica
+        nueva_prediccion = servicio_partidos.crear_prediccion(id, usuario_id, goles_local, goles_visitante)
+
+        return jsonify({
+            "mensaje": "Predicción creada exitosamente",
+            "prediccion": nueva_prediccion
+        }), 201
+
+    except ValueError:
+        return error_respuesta("Los valores enviados deben ser números", 400)
+    except Exception as e:
+        # Atrapamos errores específicos de la base de datos (Ej: partido/usuario no existe, o predicción duplicada)
+        if "DUPLICADA" in str(e):
+            return error_respuesta("El usuario ya tiene una predicción para este partido", 409)
+        elif "NO ENCONTRADO" in str(e):
+            return error_respuesta(str(e), 404)
+        elif "PARTIDO_JUGADO" in str(e):
+            return error_respuesta("El partido ya fue jugado, no se permiten predicciones", 400)
+        
+        return error_respuesta("Error interno del servidor", 500)
+
 if __name__ == '__main__':
     app.run(debug=True)
