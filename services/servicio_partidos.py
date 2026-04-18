@@ -294,3 +294,86 @@ def crear_prediccion(partido_id, usuario_id, goles_local, goles_visitante):
     finally:
         cursor.close()
         conexion.close()
+
+# Función para actualizar parcialmente un partido (PATCH)
+def actualizar_partido_parcial(id, **kwargs):
+    df = pd.read_csv('data/partidos.csv')
+
+    partido_encontrado = False
+    partido_actualizado = None
+
+    for i in range(len(df)):
+        if int(df.loc[i, 'id']) == id:
+            # Actualizar solo los campos proporcionados
+            if 'equipo_local' in kwargs:
+                df.loc[i, 'equipo_local'] = kwargs['equipo_local']
+            if 'equipo_visitante' in kwargs:
+                df.loc[i, 'equipo_visitante'] = kwargs['equipo_visitante']
+            if 'fecha' in kwargs:
+                df.loc[i, 'fecha'] = kwargs['fecha']
+            if 'fase' in kwargs:
+                df.loc[i, 'fase'] = kwargs['fase']
+            if 'estadio' in kwargs:
+                df.loc[i, 'estadio'] = kwargs['estadio']
+            if 'ciudad' in kwargs:
+                df.loc[i, 'ciudad'] = kwargs['ciudad']
+            if 'goles_local' in kwargs:
+                df.loc[i, 'goles_local'] = kwargs['goles_local']
+            if 'goles_visitante' in kwargs:
+                df.loc[i, 'goles_visitante'] = kwargs['goles_visitante']
+
+            partido_encontrado = True
+
+            # Construir el diccionario actualizado
+            goles_local = df.loc[i, 'goles_local']
+            goles_visitante = df.loc[i, 'goles_visitante']
+
+            if str(goles_local) == 'nan':
+                goles_local = None
+            else:
+                goles_local = int(goles_local)
+
+            if str(goles_visitante) == 'nan':
+                goles_visitante = None
+            else:
+                goles_visitante = int(goles_visitante)
+
+            partido_actualizado = {
+                "id": int(df.loc[i, 'id']),
+                "equipo_local": str(df.loc[i, 'equipo_local']),
+                "equipo_visitante": str(df.loc[i, 'equipo_visitante']),
+                "fecha": str(df.loc[i, 'fecha']),
+                "fase": str(df.loc[i, 'fase']),
+                "estadio": str(df.loc[i, 'estadio']),
+                "ciudad": str(df.loc[i, 'ciudad']),
+                "goles_local": goles_local,
+                "goles_visitante": goles_visitante
+            }
+
+            break
+
+    if not partido_encontrado:
+        return None
+
+    df.to_csv('data/partidos.csv', index=False)
+
+    return partido_actualizado
+
+# Función para eliminar un partido (DELETE)
+def eliminar_partido(id):
+    df = pd.read_csv('data/partidos.csv')
+
+    partido_encontrado = False
+
+    for i in range(len(df)):
+        if int(df.loc[i, 'id']) == id:
+            df = df.drop(i)
+            partido_encontrado = True
+            break
+
+    if not partido_encontrado:
+        return False
+
+    df.to_csv('data/partidos.csv', index=False)
+
+    return True

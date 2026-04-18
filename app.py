@@ -317,6 +317,82 @@ def actualizar_partidos(id):
     except Exception as d:
            return error_respuesta(f"Error interno del servidor: {str(d)}", 500)
 
+@app.route('/partidos/<int:id>', methods=['PATCH'])
+def actualizar_partido_parcial(id):
+    try:
+        datos = request.get_json()
+
+        if datos is None:
+            return error_respuesta("Debes enviar un JSON", 400)
+
+        if id <= 0:
+            return error_respuesta("El id debe ser mayor que 0", 400)
+
+        # Validar campos opcionales
+        campos_validos = ["equipo_local", "equipo_visitante", "fecha", "fase", "estadio", "ciudad", "goles_local", "goles_visitante"]
+        for campo in datos:
+            if campo not in campos_validos:
+                return error_respuesta(f"Campo no válido: {campo}", 400)
+
+        # Validaciones básicas para campos proporcionados
+        if "equipo_local" in datos:
+            if not isinstance(datos["equipo_local"], str) or str(datos["equipo_local"]).strip() == "":
+                return error_respuesta("El equipo local debe ser un texto no vacío", 400)
+        if "equipo_visitante" in datos:
+            if not isinstance(datos["equipo_visitante"], str) or str(datos["equipo_visitante"]).strip() == "":
+                return error_respuesta("El equipo visitante debe ser un texto no vacío", 400)
+        if "fase" in datos:
+            if not isinstance(datos["fase"], str) or str(datos["fase"]).strip() == "":
+                return error_respuesta("La fase debe ser un texto no vacío", 400)
+        if "estadio" in datos:
+            if not isinstance(datos["estadio"], str) or str(datos["estadio"]).strip() == "":
+                return error_respuesta("El estadio debe ser un texto no vacío", 400)
+        if "ciudad" in datos:
+            if not isinstance(datos["ciudad"], str) or str(datos["ciudad"]).strip() == "":
+                return error_respuesta("La ciudad debe ser un texto no vacío", 400)
+        if "goles_local" in datos:
+            try:
+                int(datos["goles_local"])
+            except:
+                return error_respuesta("Los goles_local deben ser un número entero", 400)
+        if "goles_visitante" in datos:
+            try:
+                int(datos["goles_visitante"])
+            except:
+                return error_respuesta("Los goles_visitante deben ser un número entero", 400)
+
+        # Verificar que equipos no sean iguales si ambos están presentes
+        equipo_local = datos.get("equipo_local", None)
+        equipo_visitante = datos.get("equipo_visitante", None)
+        if equipo_local and equipo_visitante and equipo_local.lower() == equipo_visitante.lower():
+            return error_respuesta("El equipo local y el visitante no pueden ser iguales", 400)
+
+        partido_actualizado = servicio_partidos.actualizar_partido_parcial(id, **datos)
+
+        if partido_actualizado is None:
+            return error_respuesta("Partido no encontrado", 404)
+
+        return jsonify(partido_actualizado), 200
+
+    except Exception as e:
+        return error_respuesta(f"Error interno del servidor: {str(e)}", 500)
+
+@app.route('/partidos/<int:id>', methods=['DELETE'])
+def eliminar_partido(id):
+    try:
+        if id <= 0:
+            return error_respuesta("El id debe ser mayor que 0", 400)
+
+        eliminado = servicio_partidos.eliminar_partido(id)
+
+        if not eliminado:
+            return error_respuesta("Partido no encontrado", 404)
+
+        return jsonify({"mensaje": "Partido eliminado exitosamente"}), 200
+
+    except Exception as e:
+        return error_respuesta(f"Error interno del servidor: {str(e)}", 500)
+
 @app.route('/usuarios', methods=["POST"])
 #crear usuarios
 def crear_usuario():
