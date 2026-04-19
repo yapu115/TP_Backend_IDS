@@ -1,19 +1,22 @@
 from mysql_db import get_db_connection
 
-def crear_usuario(id, nombre, mail):
+def crear_usuario(nombre, email):
     conexion = get_db_connection()
     cursor = conexion.cursor(dictionary=True)
     try:
         #Consulta para insertar valores del nuevo usuario a la base de datos
-        consulta = "INSERT INTO usuarios (nombre,mail) VALUES (%s, %s)"
+        consulta = "INSERT INTO usuarios (nombre,email) VALUES (%s, %s)"
         
         #Ejecuta la consulta con los valores de datos (parametro)
-        cursor.execute(consulta,(nombre,mail))
+        cursor.execute(consulta,(nombre, email))
         
         #Guarda los cambios
         conexion.commit()
+
+        #toma el id autogenerado por la base de datos para el nnuevo usuario
+        nuevo_id = cursor.lastrowid
         
-        return {"id": id, "nombre": nombre, "mail": mail}
+        return {"id": nuevo_id, "nombre": nombre, "email": email}
     finally:
         cursor.close()
         conexion.close()
@@ -74,3 +77,45 @@ def actualizar_usuario(id, nombre, mail):
         conexion.close()
 
     
+#Eliminar usuario a través del ID
+def eliminar_usuario(id_usuario):
+    print("ID RECIBIDO: ", id_usuario)
+
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
+
+    try:
+        #Verifica que el usuario exista
+        query_buscar = """
+            SELECT id, nombre, email
+            FROM usuarios
+            WHERE id = %s
+        """
+        print("Ejecutando busqueda en usuarios..")
+
+
+        cursor.execute(query_buscar, (id_usuario,))
+        usuario = cursor.fetchone()
+        print("Usuario encontrado:", usuario)
+
+        if not usuario:
+           return None
+
+        query_borrar_usuario = """
+           DELETE FROM usuarios
+           WHERE id = %s 
+        """
+        cursor.execute(query_borrar_usuario, (id_usuario,))
+        conexion.commit()
+
+        return usuario
+
+    except Exception as e:
+        conexion.rollback() 
+        mensaje = str(e).lower()
+
+        if "foreign key constraint fails" in mensaje:
+           raise ValueError("No se puede eliminar el usuario porque tiene predicciones asociadas")
+ 
+        raise Exception(f"Error al eliminar usuario: {str(e)}")
+

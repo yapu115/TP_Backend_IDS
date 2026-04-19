@@ -138,92 +138,163 @@ def validar_nuevo_partido(nuevo_partido):
         conexion.close()
  
 
-#Defino la función de PUT para actualizar los resultados de los partidos. En caso de no haber actualización, devuelve none
+#Defino la función PUT para actualizar los resultados de los partidos. En caso de no haber actualización, devuelve none
 def actualizar_resultado(id_partido, goles_local, goles_visitante):
-    df = pd.read_csv('data/partidos.csv')
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
 
-    partido_encontrado = False
-    partido_actualizado = None
+    try:
+        #Verifica que el partido exista
+        query_partido = """
+            SELECT id, equipo_local, equipo_visitante, fecha, fase, estadio, ciudad
+            FROM partidos
+            WHERE id = %s
+        """
 
-    for i in range(len(df)):
-        if int(df.loc[i, 'id']) == id_partido:
-            df.loc[i, 'goles_local'] = goles_local
-            df.loc[i, 'goles_visitante'] = goles_visitante
-            partido_encontrado = True
+        cursor.execute(query_partido, (id_partido,))
+        partido = cursor.fetchone() 
 
-            partido_actualizado = {
-                "id": int(df.loc[i, 'id']),
-                "equipo_local": str(df.loc[i, 'equipo_local']),
-                "equipo_visitante": str(df.loc[i, 'equipo_visitante']),
-                "fecha": str(df.loc[i, 'fecha']),
-                "fase": str(df.loc[i, 'fase']),
-                "estadio": str(df.loc[i, 'estadio']),
-                "ciudad": str(df.loc[i, 'ciudad']),
-                "goles_local": int(df.loc[i, 'goles_local']),
-                "goles_visitante": int(df.loc[i, 'goles_visitante'])
-            }
+        if not partido:
+            return None
 
-            break
+        #Verifica si existe el resultado para el partido buscado
+        query_resultado = """
+            SELECT id
+            FROM resultados
+            WHERE id = %s
+        """
 
-    if partido_encontrado == False:
-        return None
+        cursor.execute(query_resultado,(id_partido,))
+        resultado_existente = cursor.fetchone()
 
-    df.to_csv('data/partidos.csv', index=False) 
-
-    return partido_actualizado
-
-
-#defino la función de PUT para partidos
-def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio, ciudad):
-    df = pd.read_csv('data/partidos.csv')
-
-    partido_encontrado = False
-    partido_actualizado = None
-
-    for i in range(len(df)):
-        if int(df.loc[i, 'id']) == id:
-            df.loc[i, 'equipo_local'] = equipo_local
-            df.loc[i, 'equipo_visitante'] = equipo_visitante
-            df.loc[i, 'fecha'] = fecha
-            df.loc[i, 'fase'] = fase
-            df.loc[i, 'estadio'] = estadio
-            df.loc[i, 'ciudad'] = ciudad
-
-            partido_encontrado = True
-
-            goles_local = df.loc[i, 'goles_local']
-            goles_visitante = df.loc[i, 'goles_visitante']
-
-            if str(goles_local) == 'nan':
-                goles_local = None
-            else:
-                goles_local = int(goles_local)
-
-            if str(goles_visitante) == 'nan':
-                goles_visitante = None
-            else:
-                goles_visitante = int(goles_visitante)
+        if resultado_existente:
             
-            partido_actualizado = {
-                "id": int(df.loc[i, 'id']),
-                "equipo_local": str(df.loc[i, 'equipo_local']),
-                "equipo_visitante": str(df.loc[i, 'equipo_visitante']),
-                "fecha": str(df.loc[i, 'fecha']),
-                "fase": str(df.loc[i,'fase']),
-                "estadio": str(df.loc[i, 'estadio']),
-                "ciudad": str(df.loc[i, 'ciudad']),
+            #Se actualiza
+            resultado_actualizado = """
+            UPDATE resultados
+            SET goles_local = %s,
+                goles_visitante = %s,
+                jugado = %s
+            WHERE id = %s
+            """
+            cursor.execute(resultado_actualizado, (goles_local, goles_visitante, True, id_partido))
+        else:
+            insert_resultado = """
+            INSERT INTO resultados (id, goles_local, goles_visitante, jugado)
+            VALUES (%s, %s, %s, %s)
+            """
+
+            cursor.execute(insert_resultado, (id_partido, goles_local, goles_visitante, True))
+        
+        conexion.commit()
+
+        #Se arma una respuesta final
+        partido_actualizado = {
+                "id": partido["id"],
+                "equipo_local": partido["equipo_local"],
+                "equipo_visitante": partido["equipo_visitante"],
+                "fecha": str(partido["fecha"]),
+                "fase": partido["fase"],
+                "estadio": partido["estadio"],
+                "ciudad": partido["ciudad"],
                 "goles_local": goles_local,
                 "goles_visitante": goles_visitante
             }
 
-            break
+        return partido_actualizado
 
-    if partido_encontrado == False:
-       return None
+    except Exception as e:
+        conexion.rollback()
+        raise Exception(f"Error al actualizar el resultado: {str(e)}")
 
-    df.to_csv('data/partidos.csv', index=False)
+    finally:
+        cursor.close()
+        conexion.close()
 
-    return partido_actualizado
+
+
+
+
+#defino la función de PUT para partidos
+def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio, ciudad):
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
+
+    try:
+        #Verifica la existencia del partido
+        query_buscar = """
+        SELECT id
+        FROM partidos
+        WHERE id = %s
+        """ 
+        cursor.execute(query_buscar, (id,))
+        partido_existentte = cursor.fetchone()
+
+        if not partido_existentte:
+           return None
+   
+        #actualiza datos del partido
+        query_actualizada = """
+            UPDATE partidos
+            SET equipo_local = %s,
+                equipo_visitante = %s, 
+                fecha = %s,
+                fase = %s,
+                estadio = %s, 
+                ciudad = %s
+            WHERE id = %s
+        """
+
+        cursor.execute(query_actualizada, (
+            equipo_local, 
+            equipo_visitante,
+            fecha,
+            fase,
+            estadio,
+            ciudad,
+            id 
+        ))
+
+        conexion.commit()
+
+        #Traer partido actualizado y el resultado si existe
+        query_detalle = """
+           SELECT p.id, p.equipo_local, p.equipo_visitante, p.fecha, p.fase,
+                  p.estadio, p.ciudad,
+                  r.goles_local, r.goles_visitante
+           FROM partidos p
+           LEFT JOIN resultados r ON p.id = r.id
+           WHERE p.id = %s
+        """
+
+        cursor.execute(query_detalle, (id,))
+        partido = cursor.fetchone()
+
+        if not partido:
+            return None
+
+        partido_actualizado = {
+                "id": partido["id"],
+                "equipo_local": partido["equipo_local"],
+                "equipo_visitante": partido["equipo_visitante"],
+                "fecha": str(partido["fecha"]),
+                "fase": partido["fase"],
+                "estadio": partido["estadio"],
+                "ciudad": partido["ciudad"],
+                "goles_local": partido["goles_local"],
+                "goles_visitante": partido["goles_visitante"]
+        }
+
+        return partido_actualizado
+
+    except Exception as e:
+        conexion.rollback()
+        raise Exception(f"Error al actualizar el partido: {str(e)}")
+    
+    finally:
+        cursor.close()
+        conexion.close()
+
 
 #def id para obtener partidos
 def obtener_partido_por_id(id_partido: int):

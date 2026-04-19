@@ -207,6 +207,7 @@ def actualizar_resultado(id):
     except Exception as e:
         return error_respuesta(f"Error interno del servidor: {str(e)}", 500) 
 
+
 #PUT DE PARTIDOS
 def texto_valido(valor):
     if not isinstance(valor,str):
@@ -286,12 +287,12 @@ def actualizar_partidos(id):
         if not texto_valido(ciudad):
             return error_respuesta("La ciudad debe ser un texto", 400)
 
-        equipo_local = datos["equipo_local"].str()
-        equipo_visitante = datos["equipo_visitante"].str()
-        fecha = datos["fecha"].str()
-        fase = datos["fase"].str()
-        estadio = datos["estadio"].str()
-        ciudad = datos["ciudad"].str()
+        equipo_local = str(datos["equipo_local"].strip())
+        equipo_visitante = str(datos["equipo_visitante"].strip())
+        fecha = str(datos["fecha"].strip())
+        fase = str(datos["fase"].strip())
+        estadio = str(datos["estadio"].strip())
+        ciudad = str(datos["ciudad"].strip())
 
         if fecha == "":
             return error_respuesta("La fecha no puede estar vacía",400)
@@ -316,6 +317,8 @@ def actualizar_partidos(id):
 
     except Exception as d:
            return error_respuesta(f"Error interno del servidor: {str(d)}", 500)
+
+
 
 @app.route('/partidos/<int:id>', methods=['PATCH'])
 def actualizar_partido_parcial(id):
@@ -398,23 +401,22 @@ def eliminar_partido(id):
 def crear_usuario():
     datos = request.get_json()
     if not datos:
-        return jsonify({"Error: Por favor, proporcione los datos necesarios"}), 400
-    campos_requeridos = ["nombre", "mail"]
+        return jsonify({"Error": f"Por favor, proporcione los datos necesarios"}), 400
+    campos_requeridos = ["nombre", "email"]
     for campo in campos_requeridos:
         if campo not in datos:
-            return jsonify({f"Error: Campo faltante ({campo})"}), 400
+            return jsonify({"Error": f"Campo faltante ({campo})"}), 400
     
     try:
         #Obtiene datos del usuario
-        id = datos.get('id')
-        nombre = datos.get('nombre')
-        mail = datos.get('mail')
+        nombre = datos.get("nombre")
+        email = datos.get("email")
 
         #Crea un nuevo usuario y lo inserta en la tabla
-        nuevo_usuario = servicios_usuarios.crear_usuario(id, nombre, mail)
-        return jsonify(nuevo_usuario), 200
+        nuevo_usuario = servicios_usuarios.crear_usuario(nombre, email)
+        return jsonify(nuevo_usuario), 201
     except Exception as e:
-        jsonify({f"Error: {str(e)}"}), 500
+        return jsonify({"Error": str(e)}), 500
 
 @app.route('/usuarios', methods=["GET"])
 def mostrar_usuarios():
@@ -454,12 +456,12 @@ def editar_usuario(id):
             return error_respuesta("ID de usuario invalido", 400)
             
         nombre = datos.get('nombre')
-        mail = datos.get('mail')
+        mail = datos.get('email')
         
-        if not nombre or not mail:
+        if not nombre or not email:
             return error_respuesta("Se deben completar todos los campos", 400)
 
-        usuario_actualizado = servicios_usuarios.actualizar_usuario(id, nombre, mail)
+        usuario_actualizado = servicios_usuarios.actualizar_usuario(id, nombre, email)
         
         if usuario_actualizado is None:
             return error_respuesta("Usuario no encontrado", 404)
@@ -468,6 +470,28 @@ def editar_usuario(id):
 
     except Exception as e:
         return error_respuesta(f"Error al actualizar: {str(e)}", 500)
+
+#Eliminar usuario a través del ID
+@app.route("/usuarios/<int:id>", methods=["DELETE"])
+def eliminar_usuario(id):
+    try:
+        usuario_eliminado = servicios_usuarios.eliminar_usuario(id)
+
+        if not usuario_eliminado:
+            return error_respuesta("Usuario no encontrado", 404)
+
+        return jsonify({
+            "mensaje":"Usuario eliminado correctamente", 
+            "usuario": usuario_eliminado
+        }), 200
+
+    except ValueError as e:
+        return error_respuesta(str(e), 400)
+
+    except Exception as e:
+        return error_respuesta(f"Error interno del servidor: {str(e)}", 500)
+
+
     
 #POST PREDICCION
 @app.route('/partidos/<int:id>/prediccion', methods=['POST'])
