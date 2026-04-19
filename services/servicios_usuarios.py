@@ -39,7 +39,7 @@ def obtener_usuario_por_id(id):
     cursor = conexion.cursor(dictionary=True)   
     try:
         #consulta_sql guarda las intrucciones que van a ser enviadas a la base de datos
-        consulta_sql = "SELECT id, nombre, mail FROM usuarios WHERE id = %s"
+        consulta_sql = "SELECT id, nombre, email FROM usuarios WHERE id = %s"
         #Envia las intrucciones a la base de datos
         cursor.execute(consulta_sql, (id,))
         #Guarda la fila correspondiente a ese usuario
@@ -56,7 +56,7 @@ def actualizar_usuario(id, nombre, mail):
     cursor = conexion.cursor(dictionary=True)
     
     try:
-        consulta = 'UPDATE usuarios SET nombre = %s, mail = %s WHERE id = %s'
+        consulta = 'UPDATE usuarios SET nombre = %s, email = %s WHERE id = %s'
         
         #Se realiza la consulta a la base de datos
         cursor.execute(consulta, (nombre, mail, id))
@@ -67,7 +67,7 @@ def actualizar_usuario(id, nombre, mail):
         #Analiza si se hicieron cambios en la base de datos
         if cursor.rowcount == 0:
             return None  
-        return {"id": id, "nombre": nombre, "mail": mail}
+        return {"id": id, "nombre": nombre, "email": mail}
         
     finally:
         cursor.close()
