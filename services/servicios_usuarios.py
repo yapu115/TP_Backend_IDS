@@ -119,3 +119,61 @@ def eliminar_usuario(id_usuario):
  
         raise Exception(f"Error al eliminar usuario: {str(e)}")
 
+def obtener_ranking():
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
+    
+    try:
+        # Obtenemos usuarios con sus predicciones y los resultados de los partidos ya jugados
+        query = """
+            SELECT 
+                u.id as usuario_id, 
+                u.nombre, 
+                p.goles_local as pred_local, 
+                p.goles_visitante as pred_visitante,
+                r.goles_local as res_local, 
+                r.goles_visitante as res_visitante
+            FROM usuarios u
+            LEFT JOIN predicciones p ON u.id = p.usuario_id
+            LEFT JOIN resultados r ON p.partido_id = r.id AND r.jugado = TRUE
+        """
+        cursor.execute(query)
+        filas = cursor.fetchall()
+        
+        ranking = {}
+        for fila in filas:
+            usuario_id = fila['usuario_id']
+            if usuario_id not in ranking:
+                ranking[usuario_id] = {
+                    "id_usuario": usuario_id,
+                    "puntos": 0
+                }
+            
+            # Solo calculamos si hay prediccion y el partido ya se jugó (tiene resultado)
+            if fila['pred_local'] is not None and fila['res_local'] is not None:
+                p_local = fila['pred_local']
+                p_vis = fila['pred_visitante']
+                r_local = fila['res_local']
+                r_vis = fila['res_visitante']
+                
+                # Acierto exacto: 3 puntos
+                if p_local == r_local and p_vis == r_vis:
+                    ranking[usuario_id]["puntos"] += 3
+                # Acierto de ganador/empate: 1 punto
+                else:
+                    dif_pred = p_local - p_vis
+                    dif_res = r_local - r_vis
+                    if (dif_pred > 0 and dif_res > 0) or \
+                       (dif_pred < 0 and dif_res < 0) or \
+                       (dif_pred == 0 and dif_res == 0):
+                        ranking[usuario_id]["puntos"] += 1
+                        
+        # Convertimos a lista y ordenamos de mayor a menor puntaje
+        ranking_lista = list(ranking.values())
+        ranking_lista.sort(key=lambda x: x["puntos"], reverse=True)
+        
+        return ranking_lista
+    finally:
+        cursor.close()
+        conexion.close()
+

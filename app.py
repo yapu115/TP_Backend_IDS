@@ -1,13 +1,30 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
+from flask_swagger_ui import get_swaggerui_blueprint
 from services import servicio_partidos, servicios_usuarios
 from utils.errores import error_respuesta
 from models.PartidoBase import PartidoBase
 
 app = Flask(__name__)
 
+# Swagger Config
+SWAGGER_URL = '/api/docs'
+API_URL = '/swagger.yaml'
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "API TP_Backend_IDS"
+    }
+)
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
 @app.route('/')
 def hello_world():
     return '¡Hola, mundo! El servidor Flask está funcionando.'
+
+@app.route('/swagger.yaml')
+def serve_swagger_yaml():
+    return send_from_directory('.', 'swagger.yaml')
 
 @app.route('/partidos', methods=['GET'])
 def obtener_partidos():
@@ -456,7 +473,7 @@ def editar_usuario(id):
             return error_respuesta("ID de usuario invalido", 400)
             
         nombre = datos.get('nombre')
-        mail = datos.get('email')
+        email = datos.get('email')
         
         if not nombre or not email:
             return error_respuesta("Se deben completar todos los campos", 400)
@@ -539,6 +556,89 @@ def crear_prediccion(id):
             return error_respuesta("El partido ya fue jugado, no se permiten predicciones", 400)
         
         return error_respuesta("Error interno del servidor", 500)
+
+@app.route('/ranking', methods=['GET'])
+def obtener_ranking():
+    try:
+        _limit = request.args.get('_limit', type=int) 
+        _offset = request.args.get('_offset', default=0, type=int)
+
+        if _limit is not None and _limit <= 0:
+            return jsonify({
+                "errors": [{
+                    "code": "BAD_REQUEST",
+                    "message": "Límite inválido",
+                    "level": "error",
+                    "description": "El límite (_limit) debe ser un número mayor a 0."
+                }]
+            }), 400
+
+        if _offset < 0:
+            return jsonify({
+                "errors": [{
+                    "code": "BAD_REQUEST",
+                    "message": "Offset inválido",
+                    "level": "error",
+                    "description": "El desplazamiento (_offset) no puede ser negativo."
+                }]
+            }), 400
+
+        ranking = servicios_usuarios.obtener_ranking()
+        
+        if not ranking and _offset == 0:
+            return '', 204
+
+        total = len(ranking)
+        
+        # Paginación manual en la lista
+        if _limit is not None:
+            ranking_paginado = ranking[_offset : _offset + _limit]
+        else:
+            ranking_paginado = ranking[_offset:]
+
+        links = {}
+        if _limit is not None:
+            from urllib.parse import urlencode
+            args = request.args.copy()
+            url_base = request.base_url
+
+            def construir_url(offset_val):
+                args_copy = args.copy()
+                args_copy['_offset'] = offset_val
+                args_copy['_limit'] = _limit
+                return f"{url_base}?{urlencode(args_copy)}"
+
+            last_page_offset = max(0, (total - 1) // _limit * _limit) if total > 0 else 0
+
+            links = {
+                '_first': {"href": construir_url(0)},
+                '_last': {"href": construir_url(last_page_offset)}
+            }
+
+            if _offset > 0:
+                links['_prev'] = {"href": construir_url(max(0, _offset - _limit))}
+
+            if _offset + _limit < total:
+                links['_next'] = {"href": construir_url(_offset + _limit)}
+
+            return jsonify({
+                'ranking': ranking_paginado,
+                '_links': links
+            }), 200
+
+        return jsonify({
+            'ranking': ranking_paginado
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "errors": [{
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "Error interno del servidor",
+                "level": "error",
+                "description": str(e)
+            }]
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
