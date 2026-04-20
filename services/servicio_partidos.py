@@ -140,6 +140,12 @@ def validar_nuevo_partido(nuevo_partido):
 
 #Defino la función PUT para actualizar los resultados de los partidos. En caso de no haber actualización, devuelve none
 def actualizar_resultado(id_partido, goles_local, goles_visitante):
+    # Validación: Los goles deben ser números enteros y no negativos
+    if not isinstance(goles_local, int) or not isinstance(goles_visitante, int):
+        raise ValueError("Los goles deben ser números enteros")
+    if goles_local < 0 or goles_visitante < 0:
+        raise ValueError("Los goles no pueden ser negativos")
+    
     conexion = get_db_connection()
     cursor = conexion.cursor(dictionary=True)
 
@@ -326,6 +332,12 @@ def obtener_partido_por_id(id_partido: int):
     return None
 
 def crear_prediccion(partido_id, usuario_id, goles_local, goles_visitante):
+    # Validación: Los goles deben ser números enteros y no negativos
+    if not isinstance(goles_local, int) or not isinstance(goles_visitante, int):
+        raise ValueError("Los goles deben ser números enteros")
+    if goles_local < 0 or goles_visitante < 0:
+        raise ValueError("Los goles no pueden ser negativos")
+    
     conexion = get_db_connection()
     cursor = conexion.cursor(dictionary=True)
 
@@ -389,8 +401,16 @@ def actualizar_partido_parcial(id, **kwargs):
             if 'ciudad' in kwargs:
                 df.loc[i, 'ciudad'] = kwargs['ciudad']
             if 'goles_local' in kwargs:
+                if not isinstance(kwargs['goles_local'], int):
+                    raise ValueError("Los goles deben ser números enteros")
+                if kwargs['goles_local'] < 0:
+                    raise ValueError("Los goles no pueden ser negativos")
                 df.loc[i, 'goles_local'] = kwargs['goles_local']
             if 'goles_visitante' in kwargs:
+                if not isinstance(kwargs['goles_visitante'], int):
+                    raise ValueError("Los goles deben ser números enteros")
+                if kwargs['goles_visitante'] < 0:
+                    raise ValueError("Los goles no pueden ser negativos")
                 df.loc[i, 'goles_visitante'] = kwargs['goles_visitante']
 
             partido_encontrado = True
