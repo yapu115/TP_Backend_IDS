@@ -439,7 +439,36 @@ def crear_usuario():
 def mostrar_usuarios():
     #mostrar usuarios en la base de datos (soporta paginación)
     try:
-        usuarios = servicios_usuarios.mostrar_usuarios()
+        usuarios, total_usuarios = servicios_usuarios.mostrar_usuarios()
+        if _limit is not None:
+            from urllib.parse import urlencode
+    
+            args = request.args.copy()
+            url_base = request.base_url
+
+            def construir_url(offset_val):
+                args_copy = args.copy()
+                args_copy['_offset'] = offset_val
+                args_copy['_limit'] = _limit
+                return f"{url_base}?{urlencode(args_copy)}"
+
+            last_page_offset = max(0, (total - 1) // _limit * _limit) if total > 0 else 0
+            links = {
+            '_first': construir_url(0),
+            '_last': construir_url(last_page_offset)
+            }
+
+            if _offset > 0:
+                links['_prev'] = construir_url(max(0, _offset - _limit))
+
+            if _offset + _limit < total:
+                links['_next'] = construir_url(_offset + _limit)
+            return jsonify({
+                'usuarios':usuarios,
+                '_links':links
+            }), 200
+
+
         return jsonify(usuarios), 200
     except Exception as e:
         return jsonify({"Error": str(e)}), 500

@@ -21,15 +21,27 @@ def crear_usuario(nombre, email):
         cursor.close()
         conexion.close()
 
-def mostrar_usuarios():
+
+
+def mostrar_usuarios(_limit=None, _offset=0):
     conexion = get_db_connection()
     cursor = conexion.cursor(dictionary=True)
     try:
         consulta = "SELECT * FROM usuarios"
+        consulta_count = "SELECT COUNT (*) FROM usuarios "
+
+        cursor.execute(consulta_count)
+        total_usuarios = cursor.fetchone()
+
+        if _limit is not None and _limit > 0:
+            consulta += " LIMIT %s OFFSET %s"
+        elif _offset > 0:
+            consulta += " LIMIT 1000000 OFFSET %s"
+
         cursor.execute(consulta)
         usuarios = cursor.fetchall()
 
-        return usuarios
+        return usuarios, total_usuarios
     finally:
         cursor.close()
         conexion.close()
