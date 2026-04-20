@@ -48,40 +48,58 @@ Este es el backend para un sistema de pronósticos deportivos. Permite administr
    El servidor de desarrollo correrá por defecto en `http://127.0.0.1:5000/`.
 
 
-## Endpoints Principales y Ejemplos de Uso
+## Endpoints y Ejemplos de Uso
 
-A continuación se listan ejemplos básicos utilizando peticiones JSON y cURL:
+A continuación se listan ejemplos básicos utilizando peticiones JSON y cURL para todos los endpoints disponibles de la API:
 
 ### Usuarios
 
 #### 1. Obtener todos los usuarios (`GET /usuarios`)
+Soporta paginación usando los parámetros `_limit` y `_offset`.
 ```bash
 curl -X GET http://127.0.0.1:5000/usuarios
 ```
 
-#### 2. Crear un usuario (`POST /usuarios`)
+#### 2. Obtener un usuario por ID (`GET /usuarios/<id>`)
+```bash
+curl -X GET http://127.0.0.1:5000/usuarios/1
+```
+
+#### 3. Crear un usuario (`POST /usuarios`)
 ```bash
 curl -X POST http://127.0.0.1:5000/usuarios \
      -H "Content-Type: application/json" \
-     -d '{"nombre": "Maria Lopez", "email": "maria@app.com"}'
+     -d '{"nombre": "Maria Perez", "email": "maria@ejemplo.com"}'
 ```
 
-#### 3. Editar un usuario (`PUT /usuarios/<id>`)
+#### 4. Editar un usuario (`PUT /usuarios/<id>`)
 ```bash
 curl -X PUT http://127.0.0.1:5000/usuarios/1 \
      -H "Content-Type: application/json" \
      -d '{"nombre": "Admin Actualizado", "email": "admin_nuevo@prode.com"}'
 ```
 
+#### 5. Eliminar un usuario (`DELETE /usuarios/<id>`)
+```bash
+curl -X DELETE http://127.0.0.1:5000/usuarios/1
+```
+
+---
+
 ### Partidos del Fixture
 
-#### 4. Obtener partidos con paginación y filtros (`GET /partidos`)
-Admite los parámetros `equipo`, `fecha`, `fase`, `_limit` y `_offset`.
+#### 6. Obtener partidos con paginación y filtros (`GET /partidos`)
+Admite los parámetros opcionales `equipo`, `fecha`, `fase`, `_limit` y `_offset`.
 ```bash
 curl -X GET "http://127.0.0.1:5000/partidos?equipo=Argentina&_limit=10&_offset=0"
 ```
 
-#### 5. Crear un partido nuevo (`POST /partidos`)
+#### 7. Obtener partido por ID (`GET /partidos/<id>`)
+```bash
+curl -X GET http://127.0.0.1:5000/partidos/1
+```
+
+#### 8. Crear un partido nuevo (`POST /partidos`)
 Selecciona una de las fases: 'grupos', 'dieciseisavos', 'octavos', 'cuartos', 'semis', 'final'.
 ```bash
 curl -X POST http://127.0.0.1:5000/partidos \
@@ -94,16 +112,48 @@ curl -X POST http://127.0.0.1:5000/partidos \
          }'
 ```
 
-#### 6. Registrar / Actualizar el resultado real del partido (`PUT /partidos/<id>/resultado`)
+#### 9. Editar todos los campos de un partido (`PUT /partidos/<id>`)
+Debe recibir obligatoriamente el equipo_local, equipo_visitante, fecha y fase.
+```bash
+curl -X PUT http://127.0.0.1:5000/partidos/1 \
+     -H "Content-Type: application/json" \
+     -d '{
+           "equipo_local": "Brasil",
+           "equipo_visitante": "Francia",
+           "fecha": "2026-07-01",
+           "fase": "cuartos"
+         }'
+```
+
+#### 10. Actualizar parcialmente un partido  (`PATCH /partidos/<id>`)
+Permite actualizar uno o más campos independientemente (ej. cambiar solo la fase o establecer los goles).
+```bash
+curl -X PATCH http://127.0.0.1:5000/partidos/1 \
+     -H "Content-Type: application/json" \
+     -d '{
+           "fase": "semis",
+           "goles_local": 2,
+           "goles_visitante": 0
+         }'
+```
+
+#### 11. Registrar / Actualizar solo el resultado real (`PUT /partidos/<id>/resultado`)
 ```bash
 curl -X PUT http://127.0.0.1:5000/partidos/1/resultado \
      -H "Content-Type: application/json" \
      -d '{"goles_local": 2, "goles_visitante": 1}'
 ```
 
+#### 12. Eliminar un partido (`DELETE /partidos/<id>`)
+```bash
+curl -X DELETE http://127.0.0.1:5000/partidos/1
+```
+
+---
+
 ### Predicciones y Prode
 
-#### 7. Hacer una predicción (`POST /partidos/<id>/prediccion`)
+#### 13. Hacer una predicción (`POST /partidos/<id>/prediccion`)
 Registra la predicción de un usuario específico para un partido antes de que se juegue.
 ```bash
 curl -X POST http://127.0.0.1:5000/partidos/1/prediccion \
@@ -115,10 +165,12 @@ curl -X POST http://127.0.0.1:5000/partidos/1/prediccion \
          }'
 ```
 
+---
+
 ### Ranking
 
-#### 8. Obtener tabla de posiciones (`GET /ranking`)
-Calcula e imprime los puntos correspondientes (3 pts si acertó exacto, 1 punto si acertó al ganador). Soporta paginación.
+#### 14. Obtener tabla de posiciones (`GET /ranking`)
+Calcula e imprime los puntos correspondientes a los usuarios (3 pts si acertó el resultado exacto, 1 punto si acertó el ganador/empate de forma general). Soporta paginación.
 ```bash
 curl -X GET "http://127.0.0.1:5000/ranking?_limit=10&_offset=0"
 ```

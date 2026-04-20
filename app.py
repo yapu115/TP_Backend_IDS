@@ -18,10 +18,6 @@ swaggerui_blueprint = get_swaggerui_blueprint(
 )
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
-@app.route('/')
-def hello_world():
-    return '¡Hola, mundo! El servidor Flask está funcionando.'
-
 @app.route('/swagger.yaml')
 def serve_swagger_yaml():
     return send_from_directory('.', 'swagger.yaml')
@@ -78,7 +74,7 @@ def obtener_partidos():
             args_copy['_limit'] = _limit
             return f"{url_base}?{urlencode(args_copy)}"
 
-        last_page_offset = max(0, (total - 1) // _limit * _limit) if total > 0 else 0
+        last_page_offset = max(0, (total - 1) // _limit * _limit) if total > 0 else 0 # Para la última página se debe saltear "x" resultados
 
         # Se comienza a construir el diccionario con los links
         links = {
@@ -257,9 +253,7 @@ def actualizar_partidos(id):
             "equipo_local",
             "equipo_visitante",
             "fecha",
-            "fase",
-            "estadio",
-            "ciudad"
+            "fase"
         ]
 
         for campo in campos_obligatorios:
@@ -270,8 +264,6 @@ def actualizar_partidos(id):
         equipo_visitante = datos["equipo_visitante"]
         fecha = datos["fecha"]
         fase = datos["fase"]
-        estadio = datos["estadio"]
-        ciudad = datos["ciudad"]
 
         #POSIBLES ERRORES
         if str(equipo_local).strip() == "":
@@ -283,12 +275,6 @@ def actualizar_partidos(id):
         if str(fase).strip() == "":
            return error_respuesta("La fase no puede estar vacia", 400)    
 
-        if str(estadio).strip() == "":
-           return error_respuesta("El estadio no puede estar vacia", 400)  
-
-        if str(ciudad).strip() == "":
-           return error_respuesta("La ciudad no puede estar vacia", 400)  
-
         if not texto_valido(equipo_local):
             return error_respuesta("El equipo local debe ser un texto", 400)
 
@@ -298,18 +284,10 @@ def actualizar_partidos(id):
         if not texto_valido(fase):
             return error_respuesta("La fase debe ser un texto", 400)
 
-        if not texto_valido(estadio):
-            return error_respuesta("El estadio debe ser un texto", 400)
-        
-        if not texto_valido(ciudad):
-            return error_respuesta("La ciudad debe ser un texto", 400)
-
         equipo_local = str(datos["equipo_local"].strip())
         equipo_visitante = str(datos["equipo_visitante"].strip())
         fecha = str(datos["fecha"].strip())
         fase = str(datos["fase"].strip())
-        estadio = str(datos["estadio"].strip())
-        ciudad = str(datos["ciudad"].strip())
 
         if fecha == "":
             return error_respuesta("La fecha no puede estar vacía",400)
@@ -322,9 +300,7 @@ def actualizar_partidos(id):
             equipo_local,
             equipo_visitante,
             fecha,
-            fase,
-            estadio,
-            ciudad
+            fase
         )
 
         if partido_actualizado is None:
@@ -349,7 +325,7 @@ def actualizar_partido_parcial(id):
             return error_respuesta("El id debe ser mayor que 0", 400)
 
         # Validar campos opcionales
-        campos_validos = ["equipo_local", "equipo_visitante", "fecha", "fase", "estadio", "ciudad", "goles_local", "goles_visitante"]
+        campos_validos = ["equipo_local", "equipo_visitante", "fecha", "fase", "goles_local", "goles_visitante"]
         for campo in datos:
             if campo not in campos_validos:
                 return error_respuesta(f"Campo no válido: {campo}", 400)
@@ -364,12 +340,6 @@ def actualizar_partido_parcial(id):
         if "fase" in datos:
             if not isinstance(datos["fase"], str) or str(datos["fase"]).strip() == "":
                 return error_respuesta("La fase debe ser un texto no vacío", 400)
-        if "estadio" in datos:
-            if not isinstance(datos["estadio"], str) or str(datos["estadio"]).strip() == "":
-                return error_respuesta("El estadio debe ser un texto no vacío", 400)
-        if "ciudad" in datos:
-            if not isinstance(datos["ciudad"], str) or str(datos["ciudad"]).strip() == "":
-                return error_respuesta("La ciudad debe ser un texto no vacío", 400)
         if "goles_local" in datos:
             try:
                 int(datos["goles_local"])

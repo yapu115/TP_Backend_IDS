@@ -1,7 +1,5 @@
-import pandas as pd
-import csv
 from models.PartidoBase import PartidoBase
-from mysql_db import get_db_connection;
+from mysql_db import get_db_connection
 
 def obtener_todos_los_partidos(equipo=None, fecha=None, fase=None, _limit=None, _offset=0):
 
@@ -222,7 +220,7 @@ def actualizar_resultado(id_partido, goles_local, goles_visitante):
 
 
 #defino la función de PUT para partidos
-def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio, ciudad):
+def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase):
     conexion = get_db_connection()
     cursor = conexion.cursor(dictionary=True)
 
@@ -245,9 +243,7 @@ def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio
             SET equipo_local = %s,
                 equipo_visitante = %s, 
                 fecha = %s,
-                fase = %s,
-                estadio = %s, 
-                ciudad = %s
+                fase = %s
             WHERE id = %s
         """
 
@@ -256,8 +252,6 @@ def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio
             equipo_visitante,
             fecha,
             fase,
-            estadio,
-            ciudad,
             id 
         ))
 
@@ -266,7 +260,6 @@ def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio
         #Traer partido actualizado y el resultado si existe
         query_detalle = """
            SELECT p.id, p.equipo_local, p.equipo_visitante, p.fecha, p.fase,
-                  p.estadio, p.ciudad,
                   r.goles_local, r.goles_visitante
            FROM partidos p
            LEFT JOIN resultados r ON p.id = r.id
@@ -285,8 +278,6 @@ def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio
                 "equipo_visitante": partido["equipo_visitante"],
                 "fecha": str(partido["fecha"]),
                 "fase": partido["fase"],
-                "estadio": partido["estadio"],
-                "ciudad": partido["ciudad"],
                 "goles_local": partido["goles_local"],
                 "goles_visitante": partido["goles_visitante"]
         }
@@ -304,32 +295,43 @@ def actualizar_partidos(id, equipo_local, equipo_visitante, fecha, fase, estadio
 
 #def id para obtener partidos
 def obtener_partido_por_id(id_partido: int):
-    df = pd.read_csv('data/partidos.csv')
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
 
-    for i in range(len(df)):
-        if int(df.loc[i, 'id']) == id_partido:
-            goles_local = df.loc[i, 'goles_local']
-            goles_visitante = df.loc[i, 'goles_visitante']
+    try:
+        query = """
+           SELECT p.id, p.equipo_local, p.equipo_visitante, p.fecha, p.fase,
+                  r.goles_local, r.goles_visitante
+           FROM partidos p
+           LEFT JOIN resultados r ON p.id = r.id
+           WHERE p.id = %s
+        """
+        cursor.execute(query, (id_partido,))
+        partido = cursor.fetchone()
 
-            # pandas usa NaN para "vacío"
-            if str(goles_local) == 'nan' or str(goles_visitante) == 'nan':
-                resultado = None
-            else:
-                resultado = {
-                    "local": int(goles_local),
-                    "visitante": int(goles_visitante)
-                }
+        if not partido:
+            return None
 
-            return {
-                "id": int(df.loc[i, 'id']),
-                "equipo_local": str(df.loc[i, 'equipo_local']),
-                "equipo_visitante": str(df.loc[i, 'equipo_visitante']),
-                "fecha": str(df.loc[i, 'fecha']),
-                "fase": str(df.loc[i, 'fase']),
-                "resultado": resultado
+        if partido['goles_local'] is not None and partido['goles_visitante'] is not None:
+            resultado = {
+                "local": partido['goles_local'],
+                "visitante": partido['goles_visitante']
             }
+        else:
+            resultado = None
 
-    return None
+        return {
+            "id": partido["id"],
+            "equipo_local": partido["equipo_local"],
+            "equipo_visitante": partido["equipo_visitante"],
+            "fecha": str(partido["fecha"]),
+            "fase": partido["fase"],
+            "resultado": resultado
+        }
+
+    finally:
+        cursor.close()
+        conexion.close()
 
 def crear_prediccion(partido_id, usuario_id, goles_local, goles_visitante):
     # Validación: Los goles deben ser números enteros y no negativos
@@ -380,91 +382,124 @@ def crear_prediccion(partido_id, usuario_id, goles_local, goles_visitante):
 
 # Función para actualizar parcialmente un partido (PATCH)
 def actualizar_partido_parcial(id, **kwargs):
-    df = pd.read_csv('data/partidos.csv')
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
 
-    partido_encontrado = False
-    partido_actualizado = None
+    try:
+        # 1. Comprobar que existe el partido
+        cursor.execute("SELECT id FROM partidos WHERE id = %s", (id,))
+        if not cursor.fetchone():
+            return None
 
-    for i in range(len(df)):
-        if int(df.loc[i, 'id']) == id:
-            # Actualizar solo los campos proporcionados
-            if 'equipo_local' in kwargs:
-                df.loc[i, 'equipo_local'] = kwargs['equipo_local']
-            if 'equipo_visitante' in kwargs:
-                df.loc[i, 'equipo_visitante'] = kwargs['equipo_visitante']
-            if 'fecha' in kwargs:
-                df.loc[i, 'fecha'] = kwargs['fecha']
-            if 'fase' in kwargs:
-                df.loc[i, 'fase'] = kwargs['fase']
-            if 'estadio' in kwargs:
-                df.loc[i, 'estadio'] = kwargs['estadio']
-            if 'ciudad' in kwargs:
-                df.loc[i, 'ciudad'] = kwargs['ciudad']
-            if 'goles_local' in kwargs:
-                if not isinstance(kwargs['goles_local'], int):
-                    raise ValueError("Los goles deben ser números enteros")
-                if kwargs['goles_local'] < 0:
-                    raise ValueError("Los goles no pueden ser negativos")
-                df.loc[i, 'goles_local'] = kwargs['goles_local']
-            if 'goles_visitante' in kwargs:
-                if not isinstance(kwargs['goles_visitante'], int):
-                    raise ValueError("Los goles deben ser números enteros")
-                if kwargs['goles_visitante'] < 0:
-                    raise ValueError("Los goles no pueden ser negativos")
-                df.loc[i, 'goles_visitante'] = kwargs['goles_visitante']
+        # Validación del compañero para goles
+        if 'goles_local' in kwargs:
+            if not isinstance(kwargs['goles_local'], int) and kwargs['goles_local'] is not None:
+                raise ValueError("Los goles deben ser números enteros")
+            if kwargs['goles_local'] is not None and kwargs['goles_local'] < 0:
+                raise ValueError("Los goles no pueden ser negativos")
+                
+        if 'goles_visitante' in kwargs:
+            if not isinstance(kwargs['goles_visitante'], int) and kwargs['goles_visitante'] is not None:
+                raise ValueError("Los goles deben ser números enteros")
+            if kwargs['goles_visitante'] is not None and kwargs['goles_visitante'] < 0:
+                raise ValueError("Los goles no pueden ser negativos")
 
-            partido_encontrado = True
+        campos_partidos = []
+        valores_partidos = []
+        
+        # Filtramos los campos permitidos que pertenecen a la tabla partidos
+        campos_permitidos = ['equipo_local', 'equipo_visitante', 'fecha', 'fase']
+        for campo in campos_permitidos:
+            if campo in kwargs:
+                campos_partidos.append(f"{campo} = %s")
+                valores_partidos.append(kwargs[campo])
 
-            # Construir el diccionario actualizado
-            goles_local = df.loc[i, 'goles_local']
-            goles_visitante = df.loc[i, 'goles_visitante']
+        # Hacemos UPDATE de la tabla partidos solo si hay campos de esa tabla
+        if campos_partidos:
+            query_partidos = f"UPDATE partidos SET {', '.join(campos_partidos)} WHERE id = %s"
+            valores_partidos.append(id)
+            cursor.execute(query_partidos, valores_partidos)
 
-            if str(goles_local) == 'nan':
-                goles_local = None
+        # 2. Manejar la actualización de goles a la tabla dependiente
+        if 'goles_local' in kwargs or 'goles_visitante' in kwargs:
+            cursor.execute("SELECT id, goles_local, goles_visitante FROM resultados WHERE id = %s", (id,))
+            resultado_existente = cursor.fetchone()
+
+            # Tomamos valores nuevos O dejamos los que estaban en la base
+            g_loc = kwargs.get('goles_local')
+            g_vis = kwargs.get('goles_visitante')
+
+            if resultado_existente:
+                if g_loc is None: g_loc = resultado_existente['goles_local']
+                if g_vis is None: g_vis = resultado_existente['goles_visitante']
+                
+                cursor.execute(
+                    "UPDATE resultados SET goles_local = %s, goles_visitante = %s, jugado = TRUE WHERE id = %s", 
+                    (g_loc, g_vis, id)
+                )
             else:
-                goles_local = int(goles_local)
+                if g_loc is None: g_loc = 0
+                if g_vis is None: g_vis = 0
+                
+                cursor.execute(
+                    "INSERT INTO resultados (id, goles_local, goles_visitante, jugado) VALUES (%s, %s, %s, TRUE)", 
+                    (id, g_loc, g_vis)
+                )
 
-            if str(goles_visitante) == 'nan':
-                goles_visitante = None
-            else:
-                goles_visitante = int(goles_visitante)
+        conexion.commit()
 
-            partido_actualizado = {
-                "id": int(df.loc[i, 'id']),
-                "equipo_local": str(df.loc[i, 'equipo_local']),
-                "equipo_visitante": str(df.loc[i, 'equipo_visitante']),
-                "fecha": str(df.loc[i, 'fecha']),
-                "fase": str(df.loc[i, 'fase']),
-                "estadio": str(df.loc[i, 'estadio']),
-                "ciudad": str(df.loc[i, 'ciudad']),
-                "goles_local": goles_local,
-                "goles_visitante": goles_visitante
-            }
+        # 3. Devolvemos el registro plano actualizado
+        query_detalle = """
+           SELECT p.id, p.equipo_local, p.equipo_visitante, p.fecha, p.fase,
+                  r.goles_local, r.goles_visitante
+           FROM partidos p
+           LEFT JOIN resultados r ON p.id = r.id
+           WHERE p.id = %s
+        """
+        cursor.execute(query_detalle, (id,))
+        partido_bd = cursor.fetchone()
 
-            break
+        partido_actualizado = {
+            "id": partido_bd["id"],
+            "equipo_local": partido_bd["equipo_local"],
+            "equipo_visitante": partido_bd["equipo_visitante"],
+            "fecha": str(partido_bd["fecha"]),
+            "fase": partido_bd["fase"],
+            "goles_local": partido_bd["goles_local"],
+            "goles_visitante": partido_bd["goles_visitante"]
+        }
 
-    if not partido_encontrado:
-        return None
+        return partido_actualizado
 
-    df.to_csv('data/partidos.csv', index=False)
-
-    return partido_actualizado
+    except Exception as e:
+        conexion.rollback()
+        raise Exception(f"Error al actualizar parcialmente mediante MySQL: {str(e)}")
+    finally:
+        cursor.close()
+        conexion.close()
 
 # Función para eliminar un partido (DELETE)
 def eliminar_partido(id):
-    df = pd.read_csv('data/partidos.csv')
+    conexion = get_db_connection()
+    cursor = conexion.cursor(dictionary=True)
 
-    partido_encontrado = False
+    try:
+        # 1. Comprobar que existe
+        cursor.execute("SELECT id FROM partidos WHERE id = %s", (id,))
+        if not cursor.fetchone():
+            return False
 
-    for i in range(len(df)):
-        if int(df.loc[i, 'id']) == id:
-            df = df.drop(i)
-            partido_encontrado = True
-            break
+        # 2. Las relaciones deben borrarse metódicamente en el orden adecuado (Claves foráneas)
+        cursor.execute("DELETE FROM predicciones WHERE partido_id = %s", (id,))
+        cursor.execute("DELETE FROM resultados WHERE id = %s", (id,))
+        cursor.execute("DELETE FROM partidos WHERE id = %s", (id,))
+        
+        conexion.commit()
+        return True
 
-    if not partido_encontrado:
-        return False
-
-    df.to_csv('data/partidos.csv', index=False)
-
-    return True
+    except Exception as e:
+        conexion.rollback()
+        raise Exception(f"Error relacional al eliminar en MySQL: {str(e)}")
+    finally:
+        cursor.close()
+        conexion.close()
