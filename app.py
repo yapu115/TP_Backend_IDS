@@ -452,7 +452,7 @@ def mostrar_usuarios():
                 args_copy['_limit'] = _limit
                 return f"{url_base}?{urlencode(args_copy)}"
 
-            last_page_offset = max(0, (total - 1) // _limit * _limit) if total > 0 else 0
+            last_page_offset = max(0, (total_usuarios - 1) // _limit * _limit) if total_usuarios > 0 else 0
             links = {
             '_first': construir_url(0),
             '_last': construir_url(last_page_offset)
