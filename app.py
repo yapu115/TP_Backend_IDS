@@ -57,9 +57,7 @@ def obtener_partidos():
     
     if not partidos and total == 0:
         return '', 204
-    
-    respuesta_json = [partido.to_dict() for partido in partidos]
-    
+        
     # Si se solicitó paginación, armamos los links HATEOAS
     if _limit is not None:
         # urlencode es para obtener los parametros de la peticion en formato string a partir de un diccionario
@@ -89,12 +87,12 @@ def obtener_partidos():
             links['_next'] = construir_url(_offset + _limit)
 
         return jsonify({
-            'resultados': respuesta_json,
+            'resultados': partidos,
             '_links': links
         }), 200
 
 
-    return jsonify(respuesta_json), 200
+    return jsonify(partidos), 200
 
 
 @app.route('/partidos', methods=['POST'])
@@ -122,16 +120,10 @@ def crear_partido():
 
     # Creación del partido
     try:
-        nuevo_partido = PartidoBase(
-            equipo_local=datos['equipo_local'],
-            equipo_visitante=datos['equipo_visitante'],
-            fecha=datos['fecha'],
-            fase=datos['fase'],
-        )
 
-        partido_creado = servicio_partidos.crear_partido(nuevo_partido)
-
+        servicio_partidos.crear_partido(datos["equipo_local"], datos["equipo_visitante"], datos["fecha"], datos["fase"])
         return jsonify({
+
         'mensaje': 'Partido creado exitosamente'
         }), 201
 

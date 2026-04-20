@@ -49,13 +49,8 @@ def obtener_todos_los_partidos(equipo=None, fecha=None, fase=None, _limit=None, 
         # 7. Convertir los diccionarios de MySQL a tus objetos PartidoBase
         partidos = []
         for fila in resultados:
-            partido = PartidoBase(
-                equipo_local=fila['equipo_local'],
-                equipo_visitante=fila['equipo_visitante'],
-                fecha=str(fila['fecha']), 
-                fase=fila['fase']
-            )
-            partidos.append(partido)
+            
+            partidos.append(fila)
 
         return partidos, total_resultados
 
@@ -63,8 +58,8 @@ def obtener_todos_los_partidos(equipo=None, fecha=None, fase=None, _limit=None, 
         cursor.close()
         conexion.close()
 
-def crear_partido(partido: PartidoBase):
-    validar_nuevo_partido(partido)
+def crear_partido(equipo_local: str, equipo_visitante: str, fecha: str, fase: str):
+    validar_nuevo_partido(equipo_local, equipo_visitante, fecha, fase)
 
     conexion = get_db_connection()
     cursor = conexion.cursor(dictionary=True)
@@ -75,14 +70,14 @@ def crear_partido(partido: PartidoBase):
             VALUES (%s, %s, %s, %s)
         """
 
-        valores = (partido.equipo_local, partido.equipo_visitante, partido.fecha, partido.fase)
+        valores = (equipo_local, equipo_visitante, fecha, fase)
         
         cursor.execute(consulta, valores)
         conexion.commit()
 
-        partido.id = cursor.lastrowid
+        id = cursor.lastrowid
 
-        return partido
+        return
 
     except Exception as e:
         conexion.rollback()
@@ -93,7 +88,7 @@ def crear_partido(partido: PartidoBase):
 
 
 
-def validar_nuevo_partido(nuevo_partido):
+def validar_nuevo_partido(equipo_local: str, equipo_visitante: str, fecha: str, fase: str):
     conexion = get_db_connection()
     cursor = conexion.cursor(dictionary=True)
     
@@ -103,7 +98,7 @@ def validar_nuevo_partido(nuevo_partido):
             SELECT COUNT(*) as cuenta FROM partidos 
             WHERE equipo_local = %s AND equipo_visitante = %s AND fase = %s
         """
-        cursor.execute(query_duplicado, (nuevo_partido.equipo_local, nuevo_partido.equipo_visitante, nuevo_partido.fase))
+        cursor.execute(query_duplicado, (equipo_local, equipo_visitante, fase))
         if cursor.fetchone()['cuenta'] > 0:
             raise ValueError('El partido ya existe')
 
@@ -116,9 +111,9 @@ def validar_nuevo_partido(nuevo_partido):
             )
         """
         cursor.execute(query_fecha, (
-            nuevo_partido.fecha,
-            nuevo_partido.equipo_local, nuevo_partido.equipo_visitante,
-            nuevo_partido.equipo_local, nuevo_partido.equipo_visitante
+            fecha,
+            equipo_local, equipo_visitante,
+            equipo_local, equipo_visitante
         ))
         
         conflictos = cursor.fetchall()
@@ -126,10 +121,10 @@ def validar_nuevo_partido(nuevo_partido):
             equipo_loc_db = partido_conflictivo['equipo_local']
             equipo_vis_db = partido_conflictivo['equipo_visitante']
             
-            if nuevo_partido.equipo_local in [equipo_loc_db, equipo_vis_db]:
-                raise ValueError(f"{nuevo_partido.equipo_local} ya juega un partido en la fecha {nuevo_partido.fecha}.")
-            if nuevo_partido.equipo_visitante in [equipo_loc_db, equipo_vis_db]:
-                raise ValueError(f"{nuevo_partido.equipo_visitante} ya juega un partido en la fecha {nuevo_partido.fecha}.")
+            if equipo_local in [equipo_loc_db, equipo_vis_db]:
+                raise ValueError(f"{equipo_local} ya juega un partido en la fecha {fecha}.")
+            if equipo_visitante in [equipo_loc_db, equipo_vis_db]:
+                raise ValueError(f"{equipo_visitante} ya juega un partido en la fecha {fecha}.")
 
     finally:
         cursor.close()
