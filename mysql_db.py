@@ -1,20 +1,20 @@
 import mysql.connector
 
-# db_config = {
-#     'host': 'localhost',
-#     'user': 'root',
-#     'password': 'test',
-#     'database': 'prode'    
-# }
-
 db_config = {
     'host': 'localhost',
-    'port': 3307,          
     'user': 'root',
-    'password': '',        
-    'database': 'prode',    
-    'use_pure': True  
+    'password': 'test',
+    'database': 'prode'    
 }
+
+# db_config = {
+#     'host': 'localhost',
+#     'port': 3307,          
+#     'user': 'root',
+#     'password': '',        
+#     'database': 'prode',    
+#     'use_pure': True  
+# }
 
 def get_db_connection():
     #iniciar conexion con base de datos

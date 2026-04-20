@@ -391,7 +391,6 @@ def actualizar_partido_parcial(id, **kwargs):
         if not cursor.fetchone():
             return None
 
-        # Validación del compañero para goles
         if 'goles_local' in kwargs:
             if not isinstance(kwargs['goles_local'], int) and kwargs['goles_local'] is not None:
                 raise ValueError("Los goles deben ser números enteros")

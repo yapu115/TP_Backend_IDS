@@ -183,6 +183,22 @@ def obtener_partido_por_id(id):
                 "description": "Ocurrió un error inesperado procesando la solicitud."
             }]
         }), 500
+
+@app.route('/partidos/<int:id>', methods=['DELETE'])
+def eliminar_partido(id):
+    try:
+        if id <= 0:
+            return error_respuesta("El id debe ser mayor que 0", 400)
+
+        eliminado = servicio_partidos.eliminar_partido(id)
+
+        if not eliminado:
+            return error_respuesta("Partido no encontrado", 404)
+
+        return jsonify({"mensaje": "Partido eliminado exitosamente"}), 200
+
+    except Exception as e:
+        return error_respuesta(f"Error interno del servidor: {str(e)}", 500)
  
 #PUT DE RESULTADOS
 @app.route('/partidos/<int:id>/resultado', methods=["PUT"])
@@ -238,7 +254,6 @@ def texto_valido(valor):
         return True
 
 @app.route('/partidos/<int:id>', methods=["PUT"])
-
 def actualizar_partidos(id):
     try:
         datos = request.get_json()
@@ -367,21 +382,9 @@ def actualizar_partido_parcial(id):
     except Exception as e:
         return error_respuesta(f"Error interno del servidor: {str(e)}", 500)
 
-@app.route('/partidos/<int:id>', methods=['DELETE'])
-def eliminar_partido(id):
-    try:
-        if id <= 0:
-            return error_respuesta("El id debe ser mayor que 0", 400)
 
-        eliminado = servicio_partidos.eliminar_partido(id)
+### ----------------------- Usuarios -------------------------
 
-        if not eliminado:
-            return error_respuesta("Partido no encontrado", 404)
-
-        return jsonify({"mensaje": "Partido eliminado exitosamente"}), 200
-
-    except Exception as e:
-        return error_respuesta(f"Error interno del servidor: {str(e)}", 500)
 
 @app.route('/usuarios', methods=["POST"])
 #crear usuarios
@@ -507,6 +510,8 @@ def eliminar_usuario(id):
     except Exception as e:
         return error_respuesta(f"Error interno del servidor: {str(e)}", 500)
 
+
+### ----------------------- Predicciones -------------------------
 
     
 #POST PREDICCION
