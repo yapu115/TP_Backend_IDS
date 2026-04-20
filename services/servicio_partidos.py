@@ -66,7 +66,7 @@ def obtener_todos_los_partidos(equipo=None, fecha=None, fase=None, _limit=None, 
         conexion.close()
 
 def crear_partido(partido: PartidoBase):
-    # validar_nuevo_partido(partido)
+    validar_nuevo_partido(partido)
 
     conexion = get_db_connection()
     cursor = conexion.cursor(dictionary=True)

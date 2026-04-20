@@ -59,6 +59,11 @@ def actualizar_usuario(id, nombre, mail):
     cursor = conexion.cursor(dictionary=True)
     
     try:
+        #Verifica primero que el usuario exista
+        cursor.execute("SELECT id FROM usuarios WHERE id = %s", (id,))
+        if not cursor.fetchone():
+            return None  
+        
         consulta = 'UPDATE usuarios SET nombre = %s, email = %s WHERE id = %s'
         
         #Se realiza la consulta a la base de datos
@@ -67,9 +72,6 @@ def actualizar_usuario(id, nombre, mail):
         #Guarda los cambios
         conexion.commit()
         
-        #Analiza si se hicieron cambios en la base de datos
-        if cursor.rowcount == 0:
-            return None  
         return {"id": id, "nombre": nombre, "email": mail}
         
     finally:

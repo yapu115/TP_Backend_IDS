@@ -264,7 +264,7 @@ def actualizar_partidos(id):
 
         for campo in campos_obligatorios:
             if campo not in datos:
-                return error_respuesta("Falta el campo {campo}", 400)
+                return error_respuesta(f"Falta el campo {campo}", 400)
 
         equipo_local = datos["equipo_local"]
         equipo_visitante = datos["equipo_visitante"]
@@ -442,7 +442,7 @@ def mostrar_usuarios():
         usuarios = servicios_usuarios.mostrar_usuarios()
         return jsonify(usuarios), 200
     except Exception as e:
-        jsonify({f"Error: {str(e)}"}), 500
+        return jsonify({"Error": str(e)}), 500
     
 @app.route('/usuarios/<int:id>',methods=["GET"])
 def obtener_usuario(id):
@@ -611,24 +611,22 @@ def obtener_ranking():
             last_page_offset = max(0, (total - 1) // _limit * _limit) if total > 0 else 0
 
             links = {
-                '_first': {"href": construir_url(0)},
-                '_last': {"href": construir_url(last_page_offset)}
+                '_first': construir_url(0),
+                '_last': construir_url(last_page_offset)
             }
 
             if _offset > 0:
-                links['_prev'] = {"href": construir_url(max(0, _offset - _limit))}
+                links['_prev'] = construir_url(max(0, _offset - _limit))
 
             if _offset + _limit < total:
-                links['_next'] = {"href": construir_url(_offset + _limit)}
+                links['_next'] = construir_url(_offset + _limit)
 
             return jsonify({
                 'ranking': ranking_paginado,
                 '_links': links
             }), 200
 
-        return jsonify({
-            'ranking': ranking_paginado
-        }), 200
+        return jsonify(ranking_paginado), 200
 
     except Exception as e:
         return jsonify({
